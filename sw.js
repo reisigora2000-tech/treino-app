@@ -1,4 +1,4 @@
-const VERSION = 'treino-v3';
+const VERSION = 'treino-v4';
 const SHELL = ['./', 'index.html', 'style.css', 'plan.js', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 const IMG_HOST = 'raw.githubusercontent.com';
 

@@ -93,6 +93,23 @@ function viewHoje(v) {
   const total = P.ex.reduce((a, ex) => a + ex.sets, 0);
   v.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', {}, h('div', { class: 'muted' }, 'Séries concluídas'), h('div', { class: 'big', id: 'prog' }, `${done}/${total}`))),
     h('div', { class: 'small' }, 'Os registros ficam salvos no aparelho e vão para a planilha quando houver internet.')));
+  // Gymrats: o treino vai para o Apple Health por um Atalho do iPhone; o Gymrats lê de lá.
+  const mins = h('input', { type: 'number', inputmode: 'numeric', id: 'mins', value: suggestMins(t, selWk), min: '5', max: '240' });
+  mins.addEventListener('input', () => { mins.dataset.edited = 1; });
+  v.append(h('div', { class: 'card' }, h('b', {}, 'Terminou o treino?'),
+    h('div', { class: 'small' }, 'Registra no Apple Health pelo Atalho "' + (S.cfg.shortcut || SHORTCUT_NAME) + '" e o Gymrats puxa de lá. Configure em Ajustes.'),
+    h('label', {}, 'Duração do treino (minutos)'), mins, h('div', { style: 'height:12px' }),
+    h('button', { class: 'btn', onclick: () => {
+      const m = Math.max(5, Math.min(240, Math.round(num(mins.value) || 0)));
+      if (!m) { mins.focus(); return; }
+      location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(S.cfg.shortcut || SHORTCUT_NAME)}&input=text&text=${m}`;
+    } }, 'Enviar para o Apple Health')));
+}
+const SHORTCUT_NAME = 'Registrar Treino';
+function suggestMins(date, wk) {
+  const ts = Object.values(S.logs).filter(r => r.date === date && r.wk === wk && r.done).map(r => r.ts);
+  if (ts.length < 2) return 60;
+  return Math.min(180, Math.max(10, Math.round((Math.max(...ts) - Math.min(...ts)) / 60000) + 3));
 }
 
 function exCard(wk, ex, i, date) {
@@ -144,6 +161,7 @@ function refreshProg() {
   const t = todayStr(), P = PLAN[selWk];
   const done = P.ex.reduce((a, ex, i) => a + [...Array(ex.sets).keys()].filter(s => S.logs[logKey(t, selWk, i, s + 1)]?.done).length, 0);
   el.textContent = `${done}/${P.ex.reduce((a, ex) => a + ex.sets, 0)}`;
+  const m = $('#mins'); if (m && !m.dataset.edited) m.value = suggestMins(t, selWk);
 }
 
 /* ---------- cronômetro de descanso ---------- */
@@ -245,6 +263,19 @@ function viewConfig(v) {
     h('label', {}, 'Link do script'), url, h('label', {}, 'Senha'), tok, h('div', { style: 'height:12px' }),
     h('button', { class: 'btn', onclick: async () => { S.cfg.url = url.value.trim(); S.cfg.token = tok.value.trim(); save(); msg.textContent = 'Sincronizando…'; msg.textContent = await sync(true); updateStatus(); } }, 'Salvar e sincronizar'),
     h('button', { class: 'btn sec', onclick: async () => { S.cfg.url = url.value.trim(); S.cfg.token = tok.value.trim(); save(); msg.textContent = 'Baixando…'; msg.textContent = await pull(); render0(); } }, 'Baixar dados da planilha'), msg));
+  const sc = h('input', { type: 'text', value: S.cfg.shortcut || SHORTCUT_NAME, autocapitalize: 'off', autocorrect: 'off' });
+  sc.addEventListener('change', () => { S.cfg.shortcut = sc.value.trim() || SHORTCUT_NAME; save(); });
+  v.append(h('div', { class: 'card' }, h('b', {}, 'Gymrats (via Apple Health)'),
+    h('div', { class: 'small' }, 'O Gymrats não tem integração direta: ele lê treinos do Apple Health. Um Atalho do iPhone grava o treino lá.'),
+    h('label', {}, 'Nome do atalho'), sc,
+    h('details', {}, h('summary', {}, 'Como criar o atalho'),
+      h('ol', {},
+        h('li', {}, 'Abra o app Atalhos > + (novo atalho) e dê o nome exato acima.'),
+        h('li', {}, 'Adicione "Obter texto da entrada" (recebe os minutos do app).'),
+        h('li', {}, 'Adicione "Registrar treino". Tipo: Treinamento de força tradicional. Duração: a variável Texto, em minutos.'),
+        h('li', {}, 'Data de início: adicione antes "Ajustar data" (data atual, subtrair os minutos) e use o resultado. Sem isso, o treino começa agora.'),
+        h('li', {}, 'Na primeira vez, permita escrever treinos no app Saúde.'),
+        h('li', {}, 'Gymrats > perfil > Apple Health: permita ler Treinos. Confira se o treino aparece no app Saúde.')))));
   v.append(h('div', { class: 'card' }, h('b', {}, 'Backup'), h('div', { class: 'small' }, 'Baixa um arquivo com todos os seus registros.'), h('div', { style: 'height:10px' }),
     h('button', { class: 'btn sec', onclick: () => {
       const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify({ logs: S.logs, body: S.body }, null, 2)], { type: 'application/json' })), download: `treino-backup-${todayStr()}.json` });
