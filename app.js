@@ -78,7 +78,8 @@ function viewHoje(v) {
   const wk = weekNum(t);
   v.append(h('div', { class: 'chips' },
     Object.entries(PLAN).map(([id, p]) => h('button', { class: 'chip' + (selWk === id ? ' on' : ''), onclick: () => { selWk = id; render(); } }, p.name, planned === id ? h('small', {}, 'hoje') : null))));
-  if (wk <= 2) v.append(h('div', { class: 'banner warn' }, `Semana ${wk}: use carga leve e pare com 2-3 repetições sobrando. Seu corpo está voltando.`));
+  const ph = phaseInfo(wk);
+  v.append(h('div', { class: 'banner' + (ph.warn ? ' warn' : '') }, h('b', {}, `Semana ${wk} de ${PROGRAM_WEEKS}`), ` · ${ph.name}. ${ph.tip}`));
   if (!selWk) {
     v.append(h('div', { class: 'card rest' }, h('div', { class: 'big' }, 'Dia de descanso'),
       h('p', { class: 'muted' }, 'Hoje não tem treino no plano. Caminhada leve, alimentação em dia e sono de 7 a 8 horas.'),
@@ -104,7 +105,7 @@ function exCard(wk, ex, i, date) {
     media.append(
       h('div', { class: 'imgs' }, [0, 1].map(n => h('img', { src: `${IMG_BASE}${ex.img}/${n}.jpg`, alt: `${ex.n} - posição ${n + 1}`, loading: 'lazy', onerror: e => e.target.style.visibility = 'hidden' }))),
       h('ul', { class: 'cues' }, ex.cues.map(c => h('li', {}, c))),
-      h('a', { class: 'vid', href: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.yt), target: '_blank', rel: 'noopener' }, '▶  Ver vídeo da execução'),
+      h('a', { class: 'vid', href: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.yt), target: '_blank', rel: 'noopener noreferrer' }, '▶  Ver vídeo da execução'),
       h('div', { class: 'credit' }, 'Imagens: free-exercise-db (domínio público). Vídeo abre no YouTube.'));
   };
   if (openMedia.has(wk + i)) fillMedia();
@@ -290,7 +291,8 @@ async function sync(manual) {
 async function pull() {
   if (!S.cfg.url) return 'Cole o link do script primeiro.';
   try {
-    const r = await fetch(S.cfg.url + (S.cfg.url.includes('?') ? '&' : '?') + 'action=pull&token=' + encodeURIComponent(S.cfg.token));
+    // POST (e não GET) para a senha não ir na URL, que fica em histórico e logs
+    const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, action: 'pull' }) });
     const j = await r.json(); if (!j.ok) return 'Erro: ' + (j.error || 'resposta inválida');
     let n = 0;
     for (const x of j.logs || []) if (!S.logs[x.k] || S.logs[x.k].ts < x.ts) { S.logs[x.k] = x; n++; }

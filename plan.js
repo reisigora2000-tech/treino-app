@@ -1,6 +1,15 @@
 // Plano Upper/Lower 4x. "img" = pasta do exercício em yuhonas/free-exercise-db (imagens 0.jpg e 1.jpg).
 // "yt" = termo de busca no YouTube (resultados em português).
 const START_DATE = '2026-11-10';
+// Ciclo de 12 semanas; depois reavalia e começa outro ciclo (ajuste PROGRAM_WEEKS se quiser).
+const PROGRAM_WEEKS = 12;
+function phaseInfo(wk) {
+  if (wk <= 2) return { name: 'Adaptação', warn: true, tip: 'Carga leve, pare com 2-3 repetições sobrando. Seu corpo está voltando.' };
+  if (wk === 9) return { name: 'Semana leve (deload)', warn: true, tip: 'Use ~70% das cargas e faça metade das séries. É para recuperar e render mais depois.' };
+  if (wk <= 8) return { name: 'Progressão', tip: 'Suba a carga quando bater o topo das repetições. Última série perto da falha.' };
+  if (wk <= PROGRAM_WEEKS) return { name: 'Progressão', tip: 'Volte às cargas normais e tente superar as da semana 8.' };
+  return { name: 'Fim do ciclo', warn: true, tip: 'Hora de reavaliar: peso, fotos, cargas. Dá para repetir o plano ou trocar os exercícios.' };
+}
 const IMG_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const WEEKDAY_PLAN = { 0: null, 1: null, 2: 'UA', 3: 'LA', 4: null, 5: 'UB', 6: 'LB' };
 
