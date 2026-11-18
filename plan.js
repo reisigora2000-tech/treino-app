@@ -1,6 +1,9 @@
 // Plano Upper/Lower 4x. "img" = pasta do exercício em yuhonas/free-exercise-db (imagens 0.jpg e 1.jpg).
 // "yt" = termo de busca no YouTube (resultados em português).
 const START_DATE = '2026-11-10';
+// Rodízio, igual aos apps da família: o app mostra o próximo treino da fila (Upper A, Lower A, Upper B, Lower B)
+// e você escolhe quantos dias por semana vai. A "semana" do plano avança a cada 4 treinos concluídos.
+const PROFILE = { rotation: { order: ['UA', 'LA', 'UB', 'LB'], restBetween: true, offDays: [] } };
 // Ciclo de 12 semanas; depois reavalia e começa outro ciclo (ajuste PROGRAM_WEEKS se quiser).
 const PROGRAM_WEEKS = 12;
 function phaseInfo(wk) {
