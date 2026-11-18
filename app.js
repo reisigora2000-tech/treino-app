@@ -325,6 +325,8 @@ async function sync(manual) {
       if (kind === 'b') return S.body[key] ? { kind: 'body', ...S.body[key] } : null;
       return { kind: 'del', k: key };
     }).filter(Boolean);
+    // sem nada a enviar, o botão manual ainda confere o link e a senha (antes dizia "sincronizado" mesmo com senha errada)
+    if (!records.length && manual) { const m = await pull(); return m.startsWith('Baixado') ? 'Conectado: link e senha corretos, planilha ligada.' : m; }
     if (records.length) {
       const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, profile: PID, records }) });
       const j = await r.json();
