@@ -1,4 +1,4 @@
-const VERSION = 'treino-mae-v7';
+const VERSION = 'treino-mae-v8';
 const SHELL = ['./', 'index.html', 'profile.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png',
   '../style.css', '../app.js', '../plano-iniciante.js'];
 const IMG_HOST = 'raw.githubusercontent.com';

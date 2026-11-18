@@ -1,6 +1,6 @@
 // Perfil desta pessoa. Nenhum dado de saude aqui.
 // Tema todo vermelho a pedido dela: cores de destaque, fundo, cartoes e cronometro.
-const PROFILE = { id: 'irma', key: 'treino.irma', goal: 'saude', gymrats: false,
+const PROFILE = { id: 'irma', key: 'treino.irma', goal: 'massa', massa: { lo: 0.1, hi: 0.35, texto: '+0,1 a +0,3 kg por semana' }, proteinaKg: [1.6, 2.0], gymrats: false,
   theme: {
     'accent': '#ff3b4e', 'accent-ink': '#ffffff', 'blue': '#ff8a96',
     'bg': '#150709', 'surface': '#210d11', 'surface2': '#2d1217', 'line': '#42212a',

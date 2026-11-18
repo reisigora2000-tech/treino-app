@@ -259,8 +259,9 @@ function viewCorpo(v) {
     const ref = weekAgo.length ? S.body[weekAgo[weekAgo.length - 1]].kg : null, diff = ref != null ? last - ref : null;
     v.append(h('div', { class: 'grid2' },
       h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Atual'), h('div', { class: 'v' }, fmtKg(last) + ' kg')),
-      h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Últimos 7 dias'), h('div', { class: 'v ' + (diff == null || GOAL !== 'massa' ? '' : diff >= .2 && diff <= .6 ? 'up' : 'down') }, diff == null ? '–' : (diff > 0 ? '+' : '') + fmtKg(diff) + ' kg'))));
-    v.append(h('div', { class: 'small', style: 'margin:8px 2px' }, GOAL === 'massa' ? 'Meta para ganho de massa: +0,25 a +0,5 kg por semana. Abaixo disso por 2-3 semanas, aumente ~100 kcal/dia; acima, reduza.' : (P0.bodyNote || 'Pese-se uma vez por semana, no mesmo horário e com a mesma roupa. Oscilações pequenas são normais.')));
+      h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Últimos 7 dias'), h('div', { class: 'v ' + (diff == null || GOAL !== 'massa' ? '' : diff >= (P0.massa?.lo ?? .2) && diff <= (P0.massa?.hi ?? .6) ? 'up' : 'down') }, diff == null ? '–' : (diff > 0 ? '+' : '') + fmtKg(diff) + ' kg'))));
+    v.append(h('div', { class: 'small', style: 'margin:8px 2px' }, GOAL === 'massa' ? `Meta para ganho de massa: ${P0.massa?.texto || '+0,25 a +0,5 kg por semana'}. Abaixo disso por 2-3 semanas, aumente ~100 kcal/dia; acima, reduza.` +
+      (P0.proteinaKg ? ` Proteína: ${Math.round(last * P0.proteinaKg[0])} a ${Math.round(last * P0.proteinaKg[1])} g por dia (${String(P0.proteinaKg[0]).replace('.', ',')} a ${String(P0.proteinaKg[1]).replace('.', ',')} g por kg).` : '') : (P0.bodyNote || 'Pese-se uma vez por semana, no mesmo horário e com a mesma roupa. Oscilações pequenas são normais.')));
     v.append(h('div', { class: 'card' }, chart(dates.map(d => ({ x: fmtShort(d), y: S.body[d].kg })))));
     v.append(h('h2', {}, 'Histórico'), h('div', { class: 'card list' }, dates.slice().reverse().map((d, i, a) => {
       const prev = a[i + 1] ? S.body[a[i + 1]].kg : null, dv = prev != null ? S.body[d].kg - prev : null;
