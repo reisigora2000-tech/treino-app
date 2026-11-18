@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Treino Irmã</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Treino Irmã">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header id="top">
+  <div>
+    <div id="hdate" class="muted"></div>
+    <h1 id="htitle">Treino</h1>
+  </div>
+  <div id="status" class="status" title="Sincronização"><span class="dot"></span><span id="stxt"></span></div>
+</header>
+<main id="view"></main>
+<div id="timer" class="timer" hidden>
+  <div class="tleft"><div id="tlabel" class="muted">Descanso</div><div id="tclock">0:00</div></div>
+  <div class="tbtns"><button id="tplus" class="ghost">+15s</button><button id="tskip" class="ghost">Pular</button></div>
+  <div id="tbar" class="tbar"></div>
+</div>
+<nav id="tabs">
+  <button data-tab="hoje" class="on"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>Treino</button>
+  <button data-tab="corpo"><svg viewBox="0 0 24 24"><path d="M4 20h16M7 20V10M12 20V4M17 20v-7"/></svg>Corpo</button>
+  <button data-tab="progresso"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Evolução</button>
+  <button data-tab="config"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Ajustes</button>
+</nav>
+<script src="profile.js"></script>
+<script src="../plano-bailarina.js"></script>
+<script src="../app.js"></script>
+</body>
+</html>

@@ -124,8 +124,8 @@ function suggestMins(date, wk) {
 
 function exCard(wk, ex, i, date) {
   const prev = lastPerf(wk, i, date);
-  const unit = ex.unit === 's' ? 's' : ex.unit === 'min' ? 'min' : 'kg';
-  const timeOnly = unit === 'min', nSets = setsOf(ex, date);   // aeróbico: só os minutos, sem carga
+  const unit = ex.unit === 's' ? 's' : (ex.unit === 'min' || ex.unit === 'seg') ? ex.unit : 'kg';
+  const timeOnly = unit === 'min' || unit === 'seg', nSets = setsOf(ex, date);   // tempo: só minutos ou segundos, sem carga
   const card = h('div', { class: 'card' });
   const media = h('div', { class: 'media' + (openMedia.has(wk + i) ? ' open' : '') });
   const fillMedia = () => {
@@ -138,14 +138,14 @@ function exCard(wk, ex, i, date) {
   };
   if (openMedia.has(wk + i)) fillMedia();
   card.append(h('div', { class: 'exh' },
-    h('div', {}, h('div', { class: 'exn' }, ex.n), h('div', { class: 'exm' }, `${nSets} × ${ex.reps}${unit === 's' ? ' s' : unit === 'min' ? ' min' : ''}${timeOnly ? '' : ' · descanso ' + (ex.rest >= 120 ? (ex.rest / 60) + ' min' : ex.rest + ' s')}`)),
+    h('div', {}, h('div', { class: 'exn' }, ex.n), h('div', { class: 'exm' }, `${nSets} × ${ex.reps}${unit === 's' || unit === 'seg' ? ' s' : unit === 'min' ? ' min' : ''}${timeOnly ? '' : ' · descanso ' + (ex.rest >= 120 ? (ex.rest / 60) + ' min' : ex.rest + ' s')}`)),
     h('button', { class: 'info', 'aria-label': 'Ver como fazer', onclick: () => { const o = media.classList.toggle('open'); o ? (openMedia.add(wk + i), fillMedia()) : openMedia.delete(wk + i); } }, '?')), media);
   if (prev) {
     const all = Object.values(prev.sets);
     const hit = all.length >= nSets && all.every(r => unit === 'kg' ? (r.reps ?? 0) >= topReps(ex.reps) : true);
     if (unit === 'kg' && hit) card.append(h('div', { class: 'hint' }, `Na última vez (${fmtShort(prev.date)}) você bateu o topo das repetições. Tente subir a carga um pouco hoje.`));
   }
-  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + (timeOnly ? ' time' : '') }, h('span'), timeOnly ? null : h('span', {}, unit), h('span', {}, timeOnly ? 'minutos' : unit === 's' ? 'tempo' : 'reps'), h('span')));
+  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + (timeOnly ? ' time' : '') }, h('span'), timeOnly ? null : h('span', {}, unit), h('span', {}, timeOnly ? (unit === 'seg' ? 'segundos' : 'minutos') : unit === 's' ? 'tempo' : 'reps'), h('span')));
   for (let s = 1; s <= nSets; s++) {
     const cur = S.logs[logKey(date, wk, i, s)], p = prev?.sets[s] || prev?.sets[1];
     const kg = h('input', { type: 'number', inputmode: 'decimal', step: '0.5', placeholder: p?.kg != null ? fmtKg(p.kg) : '–', value: cur?.kg ?? '' });
