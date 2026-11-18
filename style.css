@@ -38,6 +38,7 @@ main{padding:0 16px;max-width:640px;margin:0 auto}
 .hint{font-size:13px;color:var(--warn);margin:8px 0 0}
 .sets{margin-top:10px}
 .srow{display:grid;grid-template-columns:28px 1fr 1fr 52px;gap:8px;align-items:center;margin:6px 0}
+.srow.time{grid-template-columns:28px 1fr 52px}
 .srow .n{color:var(--muted);font-weight:700;text-align:center}
 .srow.head{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0}
 .srow.head span{text-align:center}

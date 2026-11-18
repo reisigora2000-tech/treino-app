@@ -1,7 +1,12 @@
 'use strict';
 /* ---------- estado e armazenamento local (funciona offline) ---------- */
-const KEY = 'treino.v1';
-const DEFAULT = { logs: {}, body: {}, pending: [], cfg: { url: '', token: '' }, lastSync: 0 };
+// Perfil da pessoa (vem do profile.js de cada pasta; o app do Igor usa os valores padrão)
+const P0 = (typeof PROFILE !== 'undefined') ? PROFILE : {};
+const KEY = P0.key || 'treino.v1';
+const PID = P0.id || '';                 // identifica a pessoa no script do Google
+const GOAL = P0.goal || 'massa';         // 'massa' ou 'saude'
+const GYMRATS = P0.gymrats !== false;
+const DEFAULT = { logs: {}, body: {}, pending: [], cfg: { url: '', token: '' }, lastSync: 0, start: '' };
 let S = load();
 function load() {
   try { return Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem(KEY)) || {}); }
@@ -26,7 +31,10 @@ function h(tag, attrs, ...kids) {
 }
 const todayStr = () => new Date().toLocaleDateString('sv-SE');
 const parseD = s => new Date(s + 'T12:00:00');
-const weekNum = d => Math.max(1, Math.floor((parseD(d) - parseD(START_DATE)) / 864e5 / 7) + 1);
+const startDate = () => (typeof START_DATE !== 'undefined' ? START_DATE : (S.start || todayStr()));
+const weekNum = d => Math.max(1, Math.floor((parseD(d) - parseD(startDate())) / 864e5 / 7) + 1);
+// séries podem variar por fase (plano iniciante: 1 série nas semanas 1-2, depois 2)
+const setsOf = (ex, d) => (typeof setsFor === 'function' ? setsFor(ex, weekNum(d)) : ex.sets);
 const fmtDate = d => parseD(d).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 const fmtShort = d => parseD(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
@@ -80,6 +88,7 @@ function viewHoje(v) {
     Object.entries(PLAN).map(([id, p]) => h('button', { class: 'chip' + (selWk === id ? ' on' : ''), onclick: () => { selWk = id; render(); } }, p.name, planned === id ? h('small', {}, 'hoje') : null))));
   const ph = phaseInfo(wk);
   v.append(h('div', { class: 'banner' + (ph.warn ? ' warn' : '') }, h('b', {}, `Semana ${wk} de ${PROGRAM_WEEKS}`), ` · ${ph.name}. ${ph.tip}`));
+  if (P0.avisos) v.append(h('details', { class: 'card' }, h('summary', {}, 'Cuidados antes de treinar'), h('ul', { class: 'plain' }, P0.avisos.map(a => h('li', {}, a)))));
   if (!selWk) {
     v.append(h('div', { class: 'card rest' }, h('div', { class: 'big' }, 'Dia de descanso'),
       h('p', { class: 'muted' }, 'Hoje não tem treino no plano. Caminhada leve, alimentação em dia e sono de 7 a 8 horas.'),
@@ -89,11 +98,12 @@ function viewHoje(v) {
   const P = PLAN[selWk];
   v.append(h('div', { class: 'banner' }, h('b', {}, P.name), ' · ', P.tag, ' · ', P.ex.length + ' exercícios'));
   P.ex.forEach((ex, i) => v.append(exCard(selWk, ex, i, t)));
-  const done = P.ex.reduce((a, ex, i) => a + [...Array(ex.sets).keys()].filter(s => S.logs[logKey(t, selWk, i, s + 1)]?.done).length, 0);
-  const total = P.ex.reduce((a, ex) => a + ex.sets, 0);
+  const done = P.ex.reduce((a, ex, i) => a + [...Array(setsOf(ex, t)).keys()].filter(s => S.logs[logKey(t, selWk, i, s + 1)]?.done).length, 0);
+  const total = P.ex.reduce((a, ex) => a + setsOf(ex, t), 0);
   v.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', {}, h('div', { class: 'muted' }, 'Séries concluídas'), h('div', { class: 'big', id: 'prog' }, `${done}/${total}`))),
     h('div', { class: 'small' }, 'Os registros ficam salvos no aparelho e vão para a planilha quando houver internet.')));
   // Gymrats: o treino vai para o Apple Health por um Atalho do iPhone; o Gymrats lê de lá.
+  if (!GYMRATS) return;
   const mins = h('input', { type: 'number', inputmode: 'numeric', id: 'mins', value: suggestMins(t, selWk), min: '5', max: '240' });
   mins.addEventListener('input', () => { mins.dataset.edited = 1; });
   v.append(h('div', { class: 'card' }, h('b', {}, 'Terminou o treino?'),
@@ -114,39 +124,40 @@ function suggestMins(date, wk) {
 
 function exCard(wk, ex, i, date) {
   const prev = lastPerf(wk, i, date);
-  const unit = ex.unit === 's' ? 's' : 'kg';
+  const unit = ex.unit === 's' ? 's' : ex.unit === 'min' ? 'min' : 'kg';
+  const timeOnly = unit === 'min', nSets = setsOf(ex, date);   // aeróbico: só os minutos, sem carga
   const card = h('div', { class: 'card' });
   const media = h('div', { class: 'media' + (openMedia.has(wk + i) ? ' open' : '') });
   const fillMedia = () => {
     if (media.dataset.ok) return; media.dataset.ok = 1;
     media.append(
-      h('div', { class: 'imgs' }, [0, 1].map(n => h('img', { src: `${IMG_BASE}${ex.img}/${n}.jpg`, alt: `${ex.n} - posição ${n + 1}`, loading: 'lazy', onerror: e => e.target.style.visibility = 'hidden' }))),
+      ex.img ? h('div', { class: 'imgs' }, [0, 1].map(n => h('img', { src: `${IMG_BASE}${ex.img}/${n}.jpg`, alt: `${ex.n} - posição ${n + 1}`, loading: 'lazy', onerror: e => e.target.style.visibility = 'hidden' }))) : null,
       h('ul', { class: 'cues' }, ex.cues.map(c => h('li', {}, c))),
       h('a', { class: 'vid', href: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.yt), target: '_blank', rel: 'noopener noreferrer' }, '▶  Ver vídeo da execução'),
       h('div', { class: 'credit' }, 'Imagens: free-exercise-db (domínio público). Vídeo abre no YouTube.'));
   };
   if (openMedia.has(wk + i)) fillMedia();
   card.append(h('div', { class: 'exh' },
-    h('div', {}, h('div', { class: 'exn' }, ex.n), h('div', { class: 'exm' }, `${ex.sets} × ${ex.reps}${unit === 's' ? ' s' : ''} · descanso ${ex.rest >= 120 ? (ex.rest / 60) + ' min' : ex.rest + ' s'}`)),
+    h('div', {}, h('div', { class: 'exn' }, ex.n), h('div', { class: 'exm' }, `${nSets} × ${ex.reps}${unit === 's' ? ' s' : unit === 'min' ? ' min' : ''}${timeOnly ? '' : ' · descanso ' + (ex.rest >= 120 ? (ex.rest / 60) + ' min' : ex.rest + ' s')}`)),
     h('button', { class: 'info', 'aria-label': 'Ver como fazer', onclick: () => { const o = media.classList.toggle('open'); o ? (openMedia.add(wk + i), fillMedia()) : openMedia.delete(wk + i); } }, '?')), media);
   if (prev) {
     const all = Object.values(prev.sets);
-    const hit = all.length >= ex.sets && all.every(r => unit === 'kg' ? (r.reps ?? 0) >= topReps(ex.reps) : true);
+    const hit = all.length >= nSets && all.every(r => unit === 'kg' ? (r.reps ?? 0) >= topReps(ex.reps) : true);
     if (unit === 'kg' && hit) card.append(h('div', { class: 'hint' }, `Na última vez (${fmtShort(prev.date)}) você bateu o topo das repetições. Tente subir a carga um pouco hoje.`));
   }
-  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' }, h('span'), h('span', {}, unit), h('span', {}, unit === 's' ? 'tempo' : 'reps'), h('span')));
-  for (let s = 1; s <= ex.sets; s++) {
+  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + (timeOnly ? ' time' : '') }, h('span'), timeOnly ? null : h('span', {}, unit), h('span', {}, timeOnly ? 'minutos' : unit === 's' ? 'tempo' : 'reps'), h('span')));
+  for (let s = 1; s <= nSets; s++) {
     const cur = S.logs[logKey(date, wk, i, s)], p = prev?.sets[s] || prev?.sets[1];
     const kg = h('input', { type: 'number', inputmode: 'decimal', step: '0.5', placeholder: p?.kg != null ? fmtKg(p.kg) : '–', value: cur?.kg ?? '' });
-    const rp = h('input', { type: 'number', inputmode: 'numeric', placeholder: p?.reps ?? ex.reps.split('-').pop(), value: cur?.reps ?? '' });
-    const row = h('div', { class: 'srow' + (cur?.done ? ' done' : '') }, h('div', { class: 'n' }, s), kg, rp);
-    const read = () => [num(kg.value), num(rp.value)];
+    const rp = h('input', { type: 'number', inputmode: 'numeric', placeholder: p?.reps ?? (timeOnly ? ex.reps.split('-')[0] : ex.reps.split('-').pop()), value: cur?.reps ?? '' });
+    const row = h('div', { class: 'srow' + (timeOnly ? ' time' : '') + (cur?.done ? ' done' : '') }, h('div', { class: 'n' }, s), timeOnly ? null : kg, rp);
+    const read = () => [timeOnly ? null : num(kg.value), num(rp.value)];
     const persist = done => { const [a, b] = read(); saveSet(date, wk, i, s, a, b, done); };
     const ck = h('button', { class: 'ck', 'aria-label': 'Concluir série', onclick: () => {
       const on = !row.classList.contains('done');
-      if (on) { if (!kg.value && kg.placeholder !== '–') kg.value = kg.placeholder.replace(',', '.'); if (!rp.value) rp.value = rp.placeholder; }
+      if (on) { if (!timeOnly && !kg.value && kg.placeholder !== '–') kg.value = kg.placeholder.replace(',', '.'); if (!rp.value) rp.value = rp.placeholder; }
       row.classList.toggle('done', on); persist(on);
-      if (on) startTimer(ex.rest, ex.n); else stopTimer();
+      if (on) { if (!timeOnly) startTimer(ex.rest, ex.n); } else stopTimer();
       refreshProg();
     } }, '✓');
     kg.addEventListener('change', () => persist(row.classList.contains('done')));
@@ -159,8 +170,8 @@ function exCard(wk, ex, i, date) {
 function refreshProg() {
   const el = $('#prog'); if (!el || !selWk) return;
   const t = todayStr(), P = PLAN[selWk];
-  const done = P.ex.reduce((a, ex, i) => a + [...Array(ex.sets).keys()].filter(s => S.logs[logKey(t, selWk, i, s + 1)]?.done).length, 0);
-  el.textContent = `${done}/${P.ex.reduce((a, ex) => a + ex.sets, 0)}`;
+  const done = P.ex.reduce((a, ex, i) => a + [...Array(setsOf(ex, t)).keys()].filter(s => S.logs[logKey(t, selWk, i, s + 1)]?.done).length, 0);
+  el.textContent = `${done}/${P.ex.reduce((a, ex) => a + setsOf(ex, t), 0)}`;
   const m = $('#mins'); if (m && !m.dataset.edited) m.value = suggestMins(t, selWk);
 }
 
@@ -218,8 +229,8 @@ function viewCorpo(v) {
     const ref = weekAgo.length ? S.body[weekAgo[weekAgo.length - 1]].kg : null, diff = ref != null ? last - ref : null;
     v.append(h('div', { class: 'grid2' },
       h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Atual'), h('div', { class: 'v' }, fmtKg(last) + ' kg')),
-      h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Últimos 7 dias'), h('div', { class: 'v ' + (diff == null ? '' : diff >= .2 && diff <= .6 ? 'up' : 'down') }, diff == null ? '–' : (diff > 0 ? '+' : '') + fmtKg(diff) + ' kg'))));
-    v.append(h('div', { class: 'small', style: 'margin:8px 2px' }, 'Meta para ganho de massa: +0,25 a +0,5 kg por semana. Abaixo disso por 2-3 semanas, aumente ~100 kcal/dia; acima, reduza.'));
+      h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Últimos 7 dias'), h('div', { class: 'v ' + (diff == null || GOAL !== 'massa' ? '' : diff >= .2 && diff <= .6 ? 'up' : 'down') }, diff == null ? '–' : (diff > 0 ? '+' : '') + fmtKg(diff) + ' kg'))));
+    v.append(h('div', { class: 'small', style: 'margin:8px 2px' }, GOAL === 'massa' ? 'Meta para ganho de massa: +0,25 a +0,5 kg por semana. Abaixo disso por 2-3 semanas, aumente ~100 kcal/dia; acima, reduza.' : (P0.bodyNote || 'Pese-se uma vez por semana, no mesmo horário e com a mesma roupa. Oscilações pequenas são normais.')));
     v.append(h('div', { class: 'card' }, chart(dates.map(d => ({ x: fmtShort(d), y: S.body[d].kg })))));
     v.append(h('h2', {}, 'Histórico'), h('div', { class: 'card list' }, dates.slice().reverse().map((d, i, a) => {
       const prev = a[i + 1] ? S.body[a[i + 1]].kg : null, dv = prev != null ? S.body[d].kg - prev : null;
@@ -237,7 +248,7 @@ function viewProg(v) {
   v.append(h('div', { class: 'grid2' },
     h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Treinos esta semana'), h('div', { class: 'v' }, sessions.size + ' / 4')),
     h('div', { class: 'stat' }, h('div', { class: 'muted' }, 'Treinos no total'), h('div', { class: 'v' }, all.size))));
-  const names = [...new Set(Object.values(PLAN).flatMap(p => p.ex.filter(e => e.unit !== 's').map(e => e.n)))];
+  const names = [...new Set(Object.values(PLAN).flatMap(p => p.ex.filter(e => !e.unit).map(e => e.n)))];
   if (!progEx || !names.includes(progEx)) progEx = names[0];
   const sel = h('select', { onchange: e => { progEx = e.target.value; render(); } }, names.map(n => h('option', { value: n, selected: n === progEx }, n)));
   v.append(h('label', {}, 'Exercício'), sel);
@@ -265,7 +276,7 @@ function viewConfig(v) {
     h('button', { class: 'btn sec', onclick: async () => { S.cfg.url = url.value.trim(); S.cfg.token = tok.value.trim(); save(); msg.textContent = 'Baixando…'; msg.textContent = await pull(); render0(); } }, 'Baixar dados da planilha'), msg));
   const sc = h('input', { type: 'text', value: S.cfg.shortcut || SHORTCUT_NAME, autocapitalize: 'off', autocorrect: 'off' });
   sc.addEventListener('change', () => { S.cfg.shortcut = sc.value.trim() || SHORTCUT_NAME; save(); });
-  v.append(h('div', { class: 'card' }, h('b', {}, 'Gymrats (via Apple Health)'),
+  if (GYMRATS) v.append(h('div', { class: 'card' }, h('b', {}, 'Gymrats (via Apple Health)'),
     h('div', { class: 'small' }, 'O Gymrats não tem integração direta: ele lê treinos do Apple Health. Um Atalho do iPhone grava o treino lá.'),
     h('label', {}, 'Nome do atalho'), sc,
     h('details', {}, h('summary', {}, 'Como criar o atalho'),
@@ -284,7 +295,12 @@ function viewConfig(v) {
   v.append(h('details', { class: 'card' }, h('summary', {}, 'Instalar no iPhone'),
     h('ol', {}, h('li', {}, 'Abra este site no Safari.'), h('li', {}, 'Toque no botão de compartilhar.'), h('li', {}, 'Escolha "Adicionar à Tela de Início".'), h('li', {}, 'Abra pelo ícone. Depois do primeiro acesso, funciona sem internet.'))));
   v.append(h('div', { class: 'card' }, h('b', {}, 'Lembretes'), h('div', { class: 'small' }, 'Em breve: lembretes de treino no calendário do iPhone, que tocam mesmo com o app fechado.')));
-  v.append(h('div', { class: 'small', style: 'text-align:center;margin:14px 0' }, 'Semana ' + weekNum(todayStr()) + ' do plano · início em ' + fmtShort(START_DATE)));
+  if (typeof START_DATE === 'undefined') {
+    const di = h('input', { type: 'date', value: S.start });
+    di.addEventListener('change', () => { if (di.value) { S.start = di.value; save(); render(); } });
+    v.append(h('div', { class: 'card' }, h('b', {}, 'Início do plano'), h('div', { class: 'small' }, 'Muda a contagem das semanas.'), h('label', {}, 'Data de início'), di));
+  }
+  v.append(h('div', { class: 'small', style: 'text-align:center;margin:14px 0' }, 'Semana ' + weekNum(todayStr()) + ' do plano · início em ' + fmtShort(startDate())));
 }
 function render0() { render(); }
 
@@ -310,7 +326,7 @@ async function sync(manual) {
       return { kind: 'del', k: key };
     }).filter(Boolean);
     if (records.length) {
-      const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, records }) });
+      const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, profile: PID, records }) });
       const j = await r.json();
       if (!j.ok) return 'Erro: ' + (j.error || 'resposta inválida');
     }
@@ -323,7 +339,7 @@ async function pull() {
   if (!S.cfg.url) return 'Cole o link do script primeiro.';
   try {
     // POST (e não GET) para a senha não ir na URL, que fica em histórico e logs
-    const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, action: 'pull' }) });
+    const r = await fetch(S.cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: S.cfg.token, profile: PID, action: 'pull' }) });
     const j = await r.json(); if (!j.ok) return 'Erro: ' + (j.error || 'resposta inválida');
     let n = 0;
     for (const x of j.logs || []) if (!S.logs[x.k] || S.logs[x.k].ts < x.ts) { S.logs[x.k] = x; n++; }
@@ -338,4 +354,6 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- início ---------- */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+if (P0.accent) document.documentElement.style.setProperty('--accent', P0.accent);   // cor própria de cada pessoa
+if (typeof START_DATE === 'undefined' && !S.start) { S.start = todayStr(); save(); }   // perfis sem data fixa começam no 1º uso
 updateStatus(); render(); scheduleSync();
