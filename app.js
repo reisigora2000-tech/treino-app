@@ -32,7 +32,34 @@ function h(tag, attrs, ...kids) {
 const todayStr = () => new Date().toLocaleDateString('sv-SE');
 const parseD = s => new Date(s + 'T12:00:00');
 const startDate = () => (typeof START_DATE !== 'undefined' ? START_DATE : (S.start || todayStr()));
-const weekNum = d => Math.max(1, Math.floor((parseD(d) - parseD(startDate())) / 864e5 / 7) + 1);
+const weekNum = d => P0.rotation
+  ? 1 + Math.floor(sessionsBefore(d) / P0.rotation.order.length)      // rodízio: cada 4 treinos concluídos = 1 semana do plano
+  : Math.max(1, Math.floor((parseD(d) - parseD(startDate())) / 864e5 / 7) + 1);
+
+/* ---------- rodízio de treinos (vai quantos dias conseguir; o app mostra o próximo da fila) ---------- */
+function sessionMap() { const m = {}; for (const r of Object.values(S.logs)) if (r.done) { const k = r.date + '|' + r.wk; m[k] = (m[k] || 0) + 1; } return m; }
+function sessionsList() {   // sessões com ao menos 3 séries feitas, em ordem de data
+  return Object.entries(sessionMap()).filter(([, n]) => n >= 3).map(([k]) => { const [date, wk] = k.split('|'); return { date, wk }; })
+    .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+const sessionsBefore = d => sessionsList().filter(s => s.date < d).length;
+function nextWorkout(t) {
+  const order = P0.rotation.order, today = sessionMap();
+  const todays = Object.keys(today).filter(k => k.startsWith(t + '|')).sort((a, b) => today[b] - today[a]);
+  if (todays.length) return todays[0].split('|')[1];            // já treinou hoje: continua nesse treino
+  const prev = sessionsList().filter(s => s.date < t).pop();
+  if (!prev) return order[0];
+  return order[(order.indexOf(prev.wk) + 1) % order.length];
+}
+function restNotes(t) {
+  const R = P0.rotation, notes = [], wd = parseD(t).getDay();
+  const treinouHoje = Object.keys(sessionMap()).some(k => k.startsWith(t + '|'));
+  if ((R.offDays || []).includes(wd)) notes.push('Hoje é dia livre de treino. Se estiver bem, pode treinar mesmo assim.');
+  const prev = sessionsList().filter(s => s.date < t).pop();
+  if (R.restBetween && prev && !treinouHoje && Math.round((parseD(t) - parseD(prev.date)) / 864e5) === 1)
+    notes.push(`Você treinou ontem (${PLAN[prev.wk]?.name || 'treino'}). O ideal é descansar hoje e treinar amanhã. Se estiver bem, o próximo é o ${PLAN[nextWorkout(t)].name}.`);
+  return notes;
+}
 // séries podem variar por fase (plano iniciante: 1 série nas semanas 1-2, depois 2)
 const setsOf = (ex, d) => (typeof setsFor === 'function' ? setsFor(ex, weekNum(d)) : ex.sets);
 const fmtDate = d => parseD(d).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -81,13 +108,14 @@ function saveSet(date, wk, i, s, kg, reps, done) {
 /* ---------- aba Treino ---------- */
 function viewHoje(v) {
   const t = todayStr(), wd = parseD(t).getDay();
-  const planned = WEEKDAY_PLAN[wd];
+  const planned = P0.rotation ? nextWorkout(t) : WEEKDAY_PLAN[wd];
   if (!selWk) selWk = planned || null;
   const wk = weekNum(t);
   v.append(h('div', { class: 'chips' },
-    Object.entries(PLAN).map(([id, p]) => h('button', { class: 'chip' + (selWk === id ? ' on' : ''), onclick: () => { selWk = id; render(); } }, p.name, planned === id ? h('small', {}, 'hoje') : null))));
+    Object.entries(PLAN).map(([id, p]) => h('button', { class: 'chip' + (selWk === id ? ' on' : ''), onclick: () => { selWk = id; render(); } }, p.name, planned === id ? h('small', {}, P0.rotation ? 'próximo' : 'hoje') : null))));
   const ph = phaseInfo(wk);
-  v.append(h('div', { class: 'banner' + (ph.warn ? ' warn' : '') }, h('b', {}, `Semana ${wk} de ${PROGRAM_WEEKS}`), ` · ${ph.name}. ${ph.tip}`));
+  if (P0.rotation) restNotes(t).forEach(n => v.append(h('div', { class: 'banner warn' }, n)));
+  v.append(h('div', { class: 'banner' + (ph.warn ? ' warn' : '') }, h('b', {}, `Semana ${wk} de ${PROGRAM_WEEKS}`), ` · ${ph.name}. ${ph.tip}`, P0.rotation ? h('div', { class: 'small', style: 'margin-top:4px' }, `A semana avança a cada ${P0.rotation.order.length} treinos concluídos.`) : null));
   if (P0.avisos) v.append(h('details', { class: 'card' }, h('summary', {}, 'Cuidados antes de treinar'), h('ul', { class: 'plain' }, P0.avisos.map(a => h('li', {}, a)))));
   if (!selWk) {
     v.append(h('div', { class: 'card rest' }, h('div', { class: 'big' }, 'Dia de descanso'),
@@ -297,12 +325,12 @@ function viewConfig(v) {
   v.append(h('details', { class: 'card' }, h('summary', {}, 'Instalar no iPhone'),
     h('ol', {}, h('li', {}, 'Abra este site no Safari.'), h('li', {}, 'Toque no botão de compartilhar.'), h('li', {}, 'Escolha "Adicionar à Tela de Início".'), h('li', {}, 'Abra pelo ícone. Depois do primeiro acesso, funciona sem internet.'))));
   v.append(h('div', { class: 'card' }, h('b', {}, 'Lembretes'), h('div', { class: 'small' }, 'Em breve: lembretes de treino no calendário do iPhone, que tocam mesmo com o app fechado.')));
-  if (typeof START_DATE === 'undefined') {
+  if (typeof START_DATE === 'undefined' && !P0.rotation) {
     const di = h('input', { type: 'date', value: S.start });
     di.addEventListener('change', () => { if (di.value) { S.start = di.value; save(); render(); } });
     v.append(h('div', { class: 'card' }, h('b', {}, 'Início do plano'), h('div', { class: 'small' }, 'Muda a contagem das semanas.'), h('label', {}, 'Data de início'), di));
   }
-  v.append(h('div', { class: 'small', style: 'text-align:center;margin:14px 0' }, 'Semana ' + weekNum(todayStr()) + ' do plano · início em ' + fmtShort(startDate())));
+  v.append(h('div', { class: 'small', style: 'text-align:center;margin:14px 0' }, 'Semana ' + weekNum(todayStr()) + ' do plano' + (P0.rotation ? ' · cada ' + P0.rotation.order.length + ' treinos concluídos avançam 1 semana' : ' · início em ' + fmtShort(startDate()))));
 }
 function render0() { render(); }
 

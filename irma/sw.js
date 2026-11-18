@@ -1,4 +1,4 @@
-const VERSION = 'treino-irma-v3';
+const VERSION = 'treino-irma-v4';
 const SHELL = ['./', 'index.html', 'profile.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png',
   '../style.css', '../app.js', '../plano-bailarina.js'];
 const IMG_HOST = 'raw.githubusercontent.com';

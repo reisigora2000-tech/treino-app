@@ -6,4 +6,5 @@ const PROFILE = { id: 'irma', key: 'treino.irma', goal: 'saude', gymrats: false,
     'bg': '#150709', 'surface': '#210d11', 'surface2': '#2d1217', 'line': '#42212a',
     'timer-bg': '#3a0f16', 'timer-line': '#a8232f', 'done-line': '#a8232f'
   },
+  rotation: { order: ['SA', 'IA', 'SB', 'IB'], restBetween: true, offDays: [0, 6] },
   opts: {} };

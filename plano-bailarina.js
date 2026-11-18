@@ -12,7 +12,7 @@ PROFILE.avisos = [
   'Sem hiperestender joelhos ou cotovelos no topo dos movimentos.',
   'Dor muscular no dia seguinte é normal. Dor na articulação, no tendão (calcanhar, tornozelo) ou dor aguda: pare e procure o seu fisioterapeuta.',
   'Coma e se hidrate bem: treinar e dançar muito exige energia. Cansaço extremo ou queda de rendimento são sinais para reduzir.',
-  'Se a semana de aulas estiver pesada, treine 3 dias em vez de 4 (pule o Inferior B).'
+  'Vá quantos dias conseguir, de preferência um dia sim e outro não. Se a semana de aulas estiver pesada, treine menos vezes: o app continua de onde você parou.'
 ];
 
 const aquec = { n: 'Aquecimento: bicicleta leve', unit: 'min', sets: 1, reps: '5-8', rest: 0, img: 'Bicycling_Stationary', yt: 'aquecimento bicicleta ergométrica',
