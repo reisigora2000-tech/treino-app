@@ -201,6 +201,8 @@ $('#tskip').addEventListener('click', () => stopTimer());
 /* ---------- gráficos ---------- */
 function chart(points, unit) {
   const W = 320, H = 150, P = { l: 34, r: 10, t: 12, b: 22 };
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const AC = css('--accent') || '#3ddc97', GRID = css('--line') || '#262e37';
   const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('class', 'chart');
   const add = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); return e; };
@@ -209,9 +211,9 @@ function chart(points, unit) {
   if (hi - lo < 1) { hi += .5; lo -= .5; }
   const pad = (hi - lo) * .15; lo -= pad; hi += pad;
   const X = i => P.l + i * (W - P.l - P.r) / (points.length - 1), Y = y => P.t + (hi - y) * (H - P.t - P.b) / (hi - lo);
-  [lo + pad, (lo + hi) / 2, hi - pad].forEach(g => { add('line', { x1: P.l, x2: W - P.r, y1: Y(g), y2: Y(g), stroke: '#262e37' }); add('text', { x: P.l - 5, y: Y(g) + 4, 'text-anchor': 'end', fill: '#8a96a3', 'font-size': 10 }, fmtKg(g)); });
-  add('polyline', { points: points.map((p, i) => `${X(i)},${Y(p.y)}`).join(' '), fill: 'none', stroke: '#3ddc97', 'stroke-width': 2.5, 'stroke-linejoin': 'round' });
-  points.forEach((p, i) => { add('circle', { cx: X(i), cy: Y(p.y), r: 3.5, fill: '#3ddc97' }); if (i === 0 || i === points.length - 1 || points.length <= 6) add('text', { x: X(i), y: H - 6, 'text-anchor': 'middle', fill: '#8a96a3', 'font-size': 10 }, p.x); });
+  [lo + pad, (lo + hi) / 2, hi - pad].forEach(g => { add('line', { x1: P.l, x2: W - P.r, y1: Y(g), y2: Y(g), stroke: GRID }); add('text', { x: P.l - 5, y: Y(g) + 4, 'text-anchor': 'end', fill: '#8a96a3', 'font-size': 10 }, fmtKg(g)); });
+  add('polyline', { points: points.map((p, i) => `${X(i)},${Y(p.y)}`).join(' '), fill: 'none', stroke: AC, 'stroke-width': 2.5, 'stroke-linejoin': 'round' });
+  points.forEach((p, i) => { add('circle', { cx: X(i), cy: Y(p.y), r: 3.5, fill: AC }); if (i === 0 || i === points.length - 1 || points.length <= 6) add('text', { x: X(i), y: H - 6, 'text-anchor': 'middle', fill: '#8a96a3', 'font-size': 10 }, p.x); });
   return svg;
 }
 
@@ -357,5 +359,6 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
 if (P0.accent) document.documentElement.style.setProperty('--accent', P0.accent);   // cor própria de cada pessoa
+if (P0.theme) for (const [k, v] of Object.entries(P0.theme)) document.documentElement.style.setProperty('--' + k, v);   // tema completo (fundo, cartões, etc.)
 if (typeof START_DATE === 'undefined' && !S.start) { S.start = todayStr(); save(); }   // perfis sem data fixa começam no 1º uso
 updateStatus(); render(); scheduleSync();

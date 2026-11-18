@@ -1,7 +1,7 @@
 :root{
   --bg:#0b0d10;--surface:#14181d;--surface2:#1b2128;--line:#262e37;
   --text:#e8edf2;--muted:#8a96a3;--accent:#3ddc97;--accent-ink:#06210f;--blue:#4da3ff;--warn:#ffb454;--danger:#ff6b6b;
-  --tabh:64px;
+  --tabh:64px;--timer-bg:#0f2a1f;--timer-line:#1f6b47;--done-line:#245a41;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.35}
@@ -50,7 +50,7 @@ input::placeholder{color:#55616e}
 input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .ck{height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:22px}
 .srow.done .ck{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.srow.done input{border-color:#245a41}
+.srow.done input{border-color:var(--done-line)}
 button{font-family:inherit;cursor:pointer}
 .btn{width:100%;height:50px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-size:16px;font-weight:700}
 .btn.sec{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
@@ -67,7 +67,7 @@ label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
 .list .it{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
 .list .it:last-child{border-bottom:0}
 svg.chart{width:100%;height:auto;display:block}
-.timer{position:fixed;left:12px;right:12px;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 8px);background:#0f2a1f;border:1px solid #1f6b47;border-radius:16px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;overflow:hidden;z-index:20;max-width:616px;margin:0 auto}
+.timer{position:fixed;left:12px;right:12px;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 8px);background:var(--timer-bg);border:1px solid var(--timer-line);border-radius:16px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;overflow:hidden;z-index:20;max-width:616px;margin:0 auto}
 .timer[hidden]{display:none}
 #tclock{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
 .tbtns{display:flex;gap:8px}
